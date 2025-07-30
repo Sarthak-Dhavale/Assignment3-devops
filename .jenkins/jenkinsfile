@@ -30,20 +30,20 @@ pipeline {
             }
         }
 
-        stage('Backup') {
-            steps {
-                sshagent (credentials: [env.SSH_KEY_ID]) {
-                    sh """
-                    ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} << EOF
-                        if [ -d ${REMOTE_PATH} ]; then
-                            rm -rf ${BACKUP_PATH}
-                            cp -r ${REMOTE_PATH} ${BACKUP_PATH}
-                        fi
-                    EOF
-                    """
-                }
-            }
+       stage('Backup') {
+    steps {
+        sshagent (credentials: [env.SSH_KEY_ID]) {
+            sh """
+            ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
+                if [ -d "${REMOTE_PATH}" ]; then
+                    rm -rf "${BACKUP_PATH}"
+                    cp -r "${REMOTE_PATH}" "${BACKUP_PATH}"
+                fi
+            '
+            """
         }
+    }
+}
 
         stage('Deploy') {
             steps {
@@ -66,18 +66,18 @@ pipeline {
 
     post {
         failure {
-            echo 'Deployment failed, rolling back...'
-            sshagent (credentials: [env.SSH_KEY_ID]) {
-                sh """
-                ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} << EOF
-                    if [ -d ${BACKUP_PATH} ]; then
-                        rm -rf ${REMOTE_PATH}
-                        cp -r ${BACKUP_PATH} ${REMOTE_PATH}
-                    fi
-                EOF
-                """
-            }
-        }
+    echo 'Deployment failed, rolling back...'
+    sshagent (credentials: [env.SSH_KEY_ID]) {
+        sh """
+        ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
+            if [ -d "${BACKUP_PATH}" ]; then
+                rm -rf "${REMOTE_PATH}"
+                cp -r "${BACKUP_PATH}" "${REMOTE_PATH}"
+            fi
+        '
+        """
+    }
+}
         success {
             echo " Deployment successful! Version: ${params.DEPLOY_VERSION}, Env: ${params.ENV}"
         }
