@@ -9,10 +9,10 @@ pipeline {
 
     environment {
         REMOTE_USER = 'ubuntu'
-        REMOTE_HOST = '13.60.5.121' // replace with remote IP
+        REMOTE_HOST = '13.60.5.121'
         REMOTE_PATH = '/var/www/myapp'
-        SSH_KEY_ID = 'deploy-key'
-        BACKUP_PATH = "${env.REMOTE_PATH}_backup"
+        SSH_KEY_ID = 'deploy-key' // ID of credentials in Jenkins
+        BACKUP_PATH = '/var/www/myapp_backup'
     }
 
     stages {
@@ -24,7 +24,9 @@ pipeline {
 
         stage('Build') {
             steps {
-                echo 'Build steps go here (e.g. npm install)'
+                echo 'Build steps go here (e.g. npm install, npm run build)'
+                // Example:
+                // sh 'npm install && npm run build'
             }
         }
 
@@ -32,12 +34,12 @@ pipeline {
             steps {
                 sshagent (credentials: [env.SSH_KEY_ID]) {
                     sh """
-                    ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
+                    ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} << EOF
                         if [ -d ${REMOTE_PATH} ]; then
                             rm -rf ${BACKUP_PATH}
                             cp -r ${REMOTE_PATH} ${BACKUP_PATH}
                         fi
-                    '
+                    EOF
                     """
                 }
             }
@@ -47,11 +49,15 @@ pipeline {
             steps {
                 sshagent (credentials: [env.SSH_KEY_ID]) {
                     sh """
-                    scp -r . ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_PATH}_new || exit 1
-                    ssh ${REMOTE_USER}@${REMOTE_HOST} '
+                    ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "mkdir -p ${REMOTE_PATH}_new"
+
+                    # Deploy only specific files (change this if needed)
+                    scp -r * ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_PATH}_new
+
+                    ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} << EOF
                         rm -rf ${REMOTE_PATH}
                         mv ${REMOTE_PATH}_new ${REMOTE_PATH}
-                    '
+                    EOF
                     """
                 }
             }
@@ -63,17 +69,17 @@ pipeline {
             echo 'Deployment failed, rolling back...'
             sshagent (credentials: [env.SSH_KEY_ID]) {
                 sh """
-                ssh ${REMOTE_USER}@${REMOTE_HOST} '
+                ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} << EOF
                     if [ -d ${BACKUP_PATH} ]; then
                         rm -rf ${REMOTE_PATH}
                         cp -r ${BACKUP_PATH} ${REMOTE_PATH}
                     fi
-                '
+                EOF
                 """
             }
         }
         success {
-            echo "Deployment successful!"
+            echo " Deployment successful! Version: ${params.DEPLOY_VERSION}, Env: ${params.ENV}"
         }
     }
 }
