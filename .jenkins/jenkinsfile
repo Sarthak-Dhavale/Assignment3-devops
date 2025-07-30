@@ -45,16 +45,17 @@ pipeline {
     }
 }
 
-       stage('Deploy') {
+stage('Deploy') {
     steps {
         sshagent (credentials: [env.SSH_KEY_ID]) {
             sh """
             ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
                 sudo mkdir -p /var/www/myapp_new &&
-                sudo rm -rf /var/www/myapp_new/* &&
                 sudo chown -R ${REMOTE_USER}:${REMOTE_USER} /var/www/myapp_new
             '
-            scp -r ./build/* ${REMOTE_USER}@${REMOTE_HOST}:/var/www/myapp_new
+
+            scp -r * ${REMOTE_USER}@${REMOTE_HOST}:/var/www/myapp_new
+
             ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
                 sudo rm -rf /var/www/myapp &&
                 sudo mv /var/www/myapp_new /var/www/myapp
