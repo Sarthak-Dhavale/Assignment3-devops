@@ -36,8 +36,8 @@ pipeline {
             sh """
             ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
                 if [ -d "${REMOTE_PATH}" ]; then
-                    rm -rf "${BACKUP_PATH}"
-                    cp -r "${REMOTE_PATH}" "${BACKUP_PATH}"
+                    sudo rm -rf "${BACKUP_PATH}"
+                    sudo cp -r "${REMOTE_PATH}" "${BACKUP_PATH}"
                 fi
             '
             """
